@@ -1,0 +1,33 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Immergas Smartech Plus",
+        "description": "Inserisci le credenziali del portale smartechplus.immergas.com",
+        "data": {
+          "email": "Email",
+          "password": "Password"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Impossibile connettersi al server Immergas",
+      "invalid_auth": "Email o password non corretti",
+      "no_devices": "Nessun dispositivo trovato per questo account",
+      "unknown": "Errore sconosciuto"
+    },
+    "abort": {
+      "already_configured": "Questo account è già configurato"
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Opzioni Immergas",
+        "data": {
+          "poll_interval": "Intervallo di aggiornamento (secondi)"
+        }
+      }
+    }
+  }
+}
