@@ -44,11 +44,17 @@ class ImmergasConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                             CONF_PASSWORD: password,
                         },
                     )
-            except ImmergasAuthError:
+            except ImmergasAuthError as err:
+                import logging
+                logging.getLogger(__name__).error("Auth error: %s", err)
                 errors["base"] = "invalid_auth"
-            except ImmergasConnectionError:
+            except ImmergasConnectionError as err:
+                import logging
+                logging.getLogger(__name__).error("Connection error: %s", err)
                 errors["base"] = "cannot_connect"
-            except Exception:  # pylint: disable=broad-except
+            except Exception as err:
+                import logging
+                logging.getLogger(__name__).exception("Unexpected: %s", err)
                 errors["base"] = "unknown"
 
         return self.async_show_form(
