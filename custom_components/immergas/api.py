@@ -48,7 +48,17 @@ class ImmergasClient:
 
     def login(self) -> None:
         """Esegue il login e salva i cookie di sessione."""
+        # Reset sessione e cookie precedenti
+        self._session.cookies.clear()
+        self._token_a   = None
+        self._token_b   = None
+        self._phpsessid = None
+
         try:
+            # Step 1: GET della pagina login per ottenere eventuali cookie iniziali
+            self._session.get(BASE_URL + "/", timeout=15)
+
+            # Step 2: POST delle credenziali
             resp = self._session.post(
                 BASE_URL + "/",
                 data={"email": self.email, "password": self.password},
@@ -58,14 +68,16 @@ class ImmergasClient:
         except requests.RequestException as err:
             raise ImmergasConnectionError(str(err)) from err
 
-        if "logout" not in resp.text and "Dashboard" not in resp.text:
-            raise ImmergasAuthError("Login fallito: credenziali non valide")
-
-        # Salva i cookie per riutilizzarli
+        # Verifica presenza cookie tokenA e tokenB — sono la prova del login riuscito
         cookies = self._session.cookies.get_dict()
-        self._token_a  = cookies.get("tokenA")
-        self._token_b  = cookies.get("tokenB")
+        self._token_a   = cookies.get("tokenA")
+        self._token_b   = cookies.get("tokenB")
         self._phpsessid = cookies.get("PHPSESSID")
+
+        if not self._token_a or not self._token_b:
+            # Fallback: controlla anche il testo HTML
+            if "logout" not in resp.text and "Dashboard" not in resp.text:
+                raise ImmergasAuthError("Login fallito: credenziali non valide")
 
     def is_authenticated(self) -> bool:
         """Verifica se i token sono presenti."""
