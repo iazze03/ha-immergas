@@ -47,26 +47,34 @@ class ImmergasClient:
     # ─────────────────────────────────────────
 
     def login(self) -> None:
-        """Esegue il login e salva i cookie di sessione."""
-        # Reset sessione e cookie precedenti
         self._session.cookies.clear()
-        self._token_a   = None
-        self._token_b   = None
+        self._token_a = None
+        self._token_b = None
         self._phpsessid = None
-
+        import logging
+        _LOGGER = logging.getLogger(__name__)
         try:
-            # Step 1: GET della pagina login per ottenere eventuali cookie iniziali
-            self._session.get(BASE_URL + "/", timeout=15)
-
-            # Step 2: POST delle credenziali
+            r1 = self._session.get(BASE_URL + "/", timeout=15)
+            _LOGGER.error("GET status: %s cookies: %s", r1.status_code, dict(self._session.cookies))
             resp = self._session.post(
                 BASE_URL + "/",
                 data={"email": self.email, "password": self.password},
                 allow_redirects=True,
                 timeout=15,
             )
+            _LOGGER.error("POST status: %s cookies: %s", resp.status_code, dict(self._session.cookies))
+            _LOGGER.error("POST url finale: %s", resp.url)
         except requests.RequestException as err:
             raise ImmergasConnectionError(str(err)) from err
+
+        cookies = self._session.cookies.get_dict()
+        self._token_a   = cookies.get("tokenA")
+        self._token_b   = cookies.get("tokenB")
+        self._phpsessid = cookies.get("PHPSESSID")
+
+        if not self._token_a or not self._token_b:
+            if "logout" not in resp.text and "Dashboard" not in resp.text:
+                raise ImmergasAuthError("Login fallito: credenziali non valide")
 
         # Verifica presenza cookie tokenA e tokenB — sono la prova del login riuscito
         cookies = self._session.cookies.get_dict()
