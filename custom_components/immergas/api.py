@@ -48,7 +48,7 @@ class ImmergasClient:
         })
 
     def _parse_result(self, resp):
-        """Analizza la risposta dell'API che può essere int o dict."""
+        """Analizza la risposta che può essere int o dict."""
         try:
             result = resp.json()
             if isinstance(result, dict):
@@ -64,11 +64,9 @@ class ImmergasClient:
             data = resp.json()
         except Exception as err:
             raise ImmergasConnectionError(str(err)) from err
-
         gateways = data.get("gateways", [])
         if not gateways:
             return []
-
         devices = []
         for gw in gateways:
             thing_id = gw.get("thingId", "")
@@ -91,10 +89,8 @@ class ImmergasClient:
             data = resp.json()
         except Exception as err:
             raise ImmergasConnectionError(str(err)) from err
-
         if data.get("code") != 200:
             raise ImmergasConnectionError(f"Risposta inattesa: {data}")
-
         status = data.get("status", {})
         return {
             "current_temp": float(data.get("currentTemp", 0)),
@@ -129,8 +125,8 @@ class ImmergasClient:
         except Exception as err:
             raise ImmergasConnectionError(str(err)) from err
 
-    def set_boiler_mode(self, thing_id, boiler_mode, sanitary_temp=45):
-        """Imposta la modalità caldaia."""
+    def set_boiler_mode(self, device_name, thing_id, boiler_mode, sanitary_temp=45):
+        """Imposta la modalità caldaia (0=spento, 2=estate, 3=inverno, 4=raffrescamento)."""
         try:
             resp = self._session.get(
                 BASE_URL + "/api/setParamWebApp",
