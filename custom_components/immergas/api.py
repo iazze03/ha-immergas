@@ -138,6 +138,11 @@ class ImmergasClient:
                     "boilerMode": boiler_mode,
                     "setSanitario": sanitary_temp,
                     "id": thing_id,
+                    "device": device_name,
+                    "prezzoEnergiaF1": "",
+                    "prezzoEnergiaF2": "",
+                    "prezzoEnergiaF3": "",
+                    "prezzoGas": "",
                 },
                 timeout=15,
             )
