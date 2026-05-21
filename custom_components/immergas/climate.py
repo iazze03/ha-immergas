@@ -137,13 +137,12 @@ class ImmergasClimate(CoordinatorEntity, ClimateEntity):
         await self.coordinator.async_request_refresh()
 
     async def async_set_preset_mode(self, preset_mode: str) -> None:
-        """Imposta la modalità caldaia (Inverno/Estate/Spento/Raffrescamento)."""
-        boiler_mode = PRESET_TO_BOILER.get(preset_mode)
-        if boiler_mode is None:
-            return
-        await self.hass.async_add_executor_job(
-            self._client.set_boiler_mode,
-            self._thing_id,
-            boiler_mode,
-        )
-        await self.coordinator.async_request_refresh()
+    boiler_mode = PRESET_TO_BOILER.get(preset_mode)
+    if boiler_mode is None:
+        return
+    await self.hass.async_add_executor_job(
+        self._client.set_boiler_mode,
+        self._thing_id,
+        str(boiler_mode),  # ← assicurati sia stringa
+    )
+    await self.coordinator.async_request_refresh()
