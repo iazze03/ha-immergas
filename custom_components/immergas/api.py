@@ -128,20 +128,22 @@ class ImmergasClient:
         except Exception as err:
             raise ImmergasConnectionError(str(err)) from err
 
-    def set_boiler_mode(
-        self, thing_id: str, boiler_mode: str, sanitary_temp: int = 45
-    ) -> bool:
-        """Imposta la modalità caldaia."""
-        try:
-            resp = self._session.get(
-                BASE_URL + "/api/setParamWebApp",
-                params={
-                    "boilerMode":   boiler_mode,
-                    "setSanitario": sanitary_temp,
-                    "id":           thing_id,
-                },
-                timeout=15,
-            )
-            return resp.json().get("code") == 200
-        except Exception as err:
-            raise ImmergasConnectionError(str(err)) from err
+   def set_boiler_mode(self, thing_id: str, boiler_mode: str, sanitary_temp: int = 45) -> bool:
+    self._ensure_auth()
+    try:
+        resp = self._session.get(
+            BASE_URL + "/api/setParamWebApp",
+            params={
+                "boilerMode":   boiler_mode,
+                "setSanitario": sanitary_temp,
+                "id":           thing_id,
+            },
+            timeout=15,
+        )
+        result = resp.json()
+        # L'API può restituire un intero (1=ok) o un dict {"code":200}
+        if isinstance(result, dict):
+            return result.get("code") == 200
+        return int(result) > 0
+    except Exception as err:
+        raise ImmergasConnectionError(str(err)) from err
