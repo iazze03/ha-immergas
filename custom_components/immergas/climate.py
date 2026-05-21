@@ -130,6 +130,7 @@ class ImmergasClimate(CoordinatorEntity, ClimateEntity):
             return
         await self.hass.async_add_executor_job(
             self._client.set_boiler_mode,
+            self._device_name,
             self._thing_id,
             str(boiler_mode),
         )
