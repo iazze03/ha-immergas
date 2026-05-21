@@ -3,17 +3,18 @@
     "step": {
       "user": {
         "title": "Immergas Smartech Plus",
-        "description": "Inserisci le credenziali del portale smartechplus.immergas.com",
+        "description": "Inserisci i cookie di autenticazione dal portale smartechplus.immergas.com (Strumenti sviluppatore → Cookie dopo il login)",
         "data": {
-          "email": "Email",
-          "password": "Password"
+          "token_a": "Token A (cookie tokenA)",
+          "token_b": "Token B (cookie tokenB)",
+          "phpsessid": "Session ID (cookie PHPSESSID)",
+          "email": "Email (opzionale, solo per identificazione)"
         }
       }
     },
     "error": {
-      "cannot_connect": "Impossibile connettersi al server Immergas",
-      "invalid_auth": "Email o password non corretti",
-      "no_devices": "Nessun dispositivo trovato per questo account",
+      "cannot_connect": "Impossibile connettersi al server Immergas. Verifica i token.",
+      "no_devices": "Nessun dispositivo trovato. I token potrebbero essere scaduti.",
       "unknown": "Errore sconosciuto"
     },
     "abort": {

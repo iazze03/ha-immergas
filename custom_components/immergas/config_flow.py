@@ -3,51 +3,47 @@ from __future__ import annotations
 
 import voluptuous as vol
 from homeassistant import config_entries
-from homeassistant.const import CONF_EMAIL, CONF_PASSWORD
+from homeassistant.const import CONF_EMAIL
 from homeassistant.core import callback
 
-from .api import ImmergasClient, ImmergasAuthError, ImmergasConnectionError
+from .api import ImmergasClient, ImmergasConnectionError
 from .const import DOMAIN, CONF_POLL_INTERVAL, DEFAULT_POLL_INTERVAL
+
+CONF_TOKEN_A   = "token_a"
+CONF_TOKEN_B   = "token_b"
+CONF_PHPSESSID = "phpsessid"
 
 
 class ImmergasConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
-    """Gestisce il config flow per Immergas Smartech Plus."""
-
     VERSION = 1
 
     async def async_step_user(self, user_input=None):
-        """Primo step: chiede email e password."""
         errors = {}
 
         if user_input is not None:
-            email    = user_input[CONF_EMAIL]
-            password = user_input[CONF_PASSWORD]
+            token_a   = user_input[CONF_TOKEN_A].strip()
+            token_b   = user_input[CONF_TOKEN_B].strip()
+            phpsessid = user_input[CONF_PHPSESSID].strip()
+            email     = user_input.get(CONF_EMAIL, "immergas").strip()
 
-            # Evita configurazioni duplicate
-            await self.async_set_unique_id(email.lower())
+            await self.async_set_unique_id(token_a[:16])
             self._abort_if_unique_id_configured()
 
-            # Tenta il login per validare le credenziali
-            client = ImmergasClient(email, password)
+            client = ImmergasClient(token_a=token_a, token_b=token_b, phpsessid=phpsessid)
             try:
-                await self.hass.async_add_executor_job(client.login)
-                devices = await self.hass.async_add_executor_job(
-                    client.get_devices
-                )
+                devices = await self.hass.async_add_executor_job(client.get_devices)
                 if not devices:
                     errors["base"] = "no_devices"
                 else:
                     return self.async_create_entry(
-                        title=f"Immergas ({email})",
+                        title=f"Immergas ({devices[0]['device_name']})",
                         data={
-                            CONF_EMAIL:    email,
-                            CONF_PASSWORD: password,
+                            CONF_TOKEN_A:   token_a,
+                            CONF_TOKEN_B:   token_b,
+                            CONF_PHPSESSID: phpsessid,
+                            CONF_EMAIL:     email,
                         },
                     )
-            except ImmergasAuthError as err:
-                import logging
-                logging.getLogger(__name__).error("Auth error: %s", err)
-                errors["base"] = "invalid_auth"
             except ImmergasConnectionError as err:
                 import logging
                 logging.getLogger(__name__).error("Connection error: %s", err)
@@ -60,8 +56,10 @@ class ImmergasConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         return self.async_show_form(
             step_id="user",
             data_schema=vol.Schema({
-                vol.Required(CONF_EMAIL):    str,
-                vol.Required(CONF_PASSWORD): str,
+                vol.Required(CONF_TOKEN_A):   str,
+                vol.Required(CONF_TOKEN_B):   str,
+                vol.Required(CONF_PHPSESSID): str,
+                vol.Optional(CONF_EMAIL, default=""): str,
             }),
             errors=errors,
         )
@@ -69,25 +67,19 @@ class ImmergasConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     @staticmethod
     @callback
     def async_get_options_flow(config_entry):
-        """Restituisce il flow per le opzioni."""
         return ImmergasOptionsFlow(config_entry)
 
 
 class ImmergasOptionsFlow(config_entries.OptionsFlow):
-    """Gestisce le opzioni dell'integrazione (es. intervallo di polling)."""
-
     def __init__(self, config_entry):
         self.config_entry = config_entry
 
     async def async_step_init(self, user_input=None):
-        """Mostra il form delle opzioni."""
         if user_input is not None:
             return self.async_create_entry(title="", data=user_input)
-
         current_interval = self.config_entry.options.get(
             CONF_POLL_INTERVAL, DEFAULT_POLL_INTERVAL
         )
-
         return self.async_show_form(
             step_id="init",
             data_schema=vol.Schema({

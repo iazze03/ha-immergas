@@ -20,7 +20,7 @@ Permette di controllare la caldaia tramite Home Assistant e Apple HomeKit **senz
 
 1. Apri HACS in Home Assistant
 2. Vai su **Integrazioni** → menu `⋮` → **Repository personalizzati**
-3. Aggiungi `https://github.com/PeppeWH/ha-immergas` come tipo **Integrazione**
+3. Aggiungi `https://github.com/tuousername/ha-immergas` come tipo **Integrazione**
 4. Cerca "Immergas" e installa
 5. Riavvia Home Assistant
 

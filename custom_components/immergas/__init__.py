@@ -2,30 +2,34 @@
 from __future__ import annotations
 
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_EMAIL, CONF_PASSWORD
+from homeassistant.const import CONF_EMAIL
 from homeassistant.core import HomeAssistant
 
 from .api import ImmergasClient
 from .const import DOMAIN, PLATFORMS, CONF_POLL_INTERVAL, DEFAULT_POLL_INTERVAL
 from .coordinator import ImmergasCoordinator
 
+CONF_TOKEN_A   = "token_a"
+CONF_TOKEN_B   = "token_b"
+CONF_PHPSESSID = "phpsessid"
+
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Configura l'integrazione a partire da un config entry."""
-    email    = entry.data[CONF_EMAIL]
-    password = entry.data[CONF_PASSWORD]
-    interval = entry.options.get(CONF_POLL_INTERVAL, DEFAULT_POLL_INTERVAL)
+    token_a   = entry.data[CONF_TOKEN_A]
+    token_b   = entry.data[CONF_TOKEN_B]
+    phpsessid = entry.data[CONF_PHPSESSID]
+    interval  = entry.options.get(CONF_POLL_INTERVAL, DEFAULT_POLL_INTERVAL)
 
-    client = ImmergasClient(email, password)
+    client = ImmergasClient(
+        token_a=token_a,
+        token_b=token_b,
+        phpsessid=phpsessid,
+    )
 
-    # Login e discovery dispositivi
-    await hass.async_add_executor_job(client.login)
     devices = await hass.async_add_executor_job(client.get_devices)
-
-    # Usa il primo dispositivo trovato
-    # (in futuro si può estendere per account con più gateway)
-    device    = devices[0]
-    thing_id  = device["thing_id"]
+    device      = devices[0]
+    thing_id    = device["thing_id"]
     device_name = device["device_name"]
 
     coordinator = ImmergasCoordinator(
@@ -41,10 +45,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     }
 
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
-
-    # Ricarica quando cambiano le opzioni
     entry.async_on_unload(entry.add_update_listener(async_reload_entry))
-
     return True
 
 

@@ -25,9 +25,20 @@ class ImmergasConnectionError(Exception):
 class ImmergasClient:
     """Client per le API cloud Immergas Smartech Plus."""
 
-    def __init__(self, email: str, password: str) -> None:
-        self.email = email
-        self.password = password
+    def __init__(
+        self,
+        token_a: str,
+        token_b: str,
+        phpsessid: str,
+        email: str = "",
+        password: str = "",
+    ) -> None:
+        self._token_a   = token_a
+        self._token_b   = token_b
+        self._phpsessid = phpsessid
+        self.email      = email
+        self.password   = password
+
         self._session = requests.Session()
         self._session.headers.update({
             "User-Agent": (
@@ -38,75 +49,17 @@ class ImmergasClient:
             "X-Requested-With": "XMLHttpRequest",
             "Referer": BASE_URL + "/dashboard/index",
         })
-        self._token_a: str | None = None
-        self._token_b: str | None = None
-        self._phpsessid: str | None = None
-
-    # ─────────────────────────────────────────
-    #  AUTH
-    # ─────────────────────────────────────────
-
-    def login(self) -> None:
-        self._session.cookies.clear()
-        self._token_a = None
-        self._token_b = None
-        self._phpsessid = None
-        import logging
-        _LOGGER = logging.getLogger(__name__)
-        try:
-            r1 = self._session.get(BASE_URL + "/", timeout=15)
-            _LOGGER.error("GET status: %s cookies: %s", r1.status_code, dict(self._session.cookies))
-            resp = self._session.post(
-                BASE_URL + "/",
-                data={"email": self.email, "password": self.password},
-                allow_redirects=True,
-                timeout=15,
-            )
-            _LOGGER.error("POST status: %s cookies: %s", resp.status_code, dict(self._session.cookies))
-            _LOGGER.error("POST url finale: %s", resp.url)
-        except requests.RequestException as err:
-            raise ImmergasConnectionError(str(err)) from err
-
-        cookies = self._session.cookies.get_dict()
-        self._token_a   = cookies.get("tokenA")
-        self._token_b   = cookies.get("tokenB")
-        self._phpsessid = cookies.get("PHPSESSID")
-
-        if not self._token_a or not self._token_b:
-            if "logout" not in resp.text and "Dashboard" not in resp.text:
-                raise ImmergasAuthError("Login fallito: credenziali non valide")
-
-        # Verifica presenza cookie tokenA e tokenB — sono la prova del login riuscito
-        cookies = self._session.cookies.get_dict()
-        self._token_a   = cookies.get("tokenA")
-        self._token_b   = cookies.get("tokenB")
-        self._phpsessid = cookies.get("PHPSESSID")
-
-        if not self._token_a or not self._token_b:
-            # Fallback: controlla anche il testo HTML
-            if "logout" not in resp.text and "Dashboard" not in resp.text:
-                raise ImmergasAuthError("Login fallito: credenziali non valide")
-
-    def is_authenticated(self) -> bool:
-        """Verifica se i token sono presenti."""
-        return bool(self._token_a and self._token_b)
-
-    def _ensure_auth(self) -> None:
-        """Esegue il login se non autenticato."""
-        if not self.is_authenticated():
-            self.login()
-
-    # ─────────────────────────────────────────
-    #  LETTURA
-    # ─────────────────────────────────────────
+        self._session.cookies.update({
+            "tokenA":    token_a,
+            "tokenB":    token_b,
+            "PHPSESSID": phpsessid,
+            "lang":      "it",
+        })
 
     def get_devices(self) -> list[dict]:
         """Restituisce la lista dei gateway/dispositivi."""
-        self._ensure_auth()
         try:
-            resp = self._session.get(
-                BASE_URL + "/api/getDevices", timeout=15
-            )
+            resp = self._session.get(BASE_URL + "/api/getDevices", timeout=15)
             data = resp.json()
         except Exception as err:
             raise ImmergasConnectionError(str(err)) from err
@@ -127,29 +80,15 @@ class ImmergasClient:
         return devices
 
     def get_status(self, device_name: str, thing_id: str) -> dict:
-        """
-        Legge lo stato corrente del termostato.
-
-        Restituisce un dict con:
-          current_temp, setpoint, ext_temp,
-          mode (0=manuale, 1=auto), fire_icon (bool)
-        """
-        self._ensure_auth()
+        """Legge lo stato corrente del termostato."""
         try:
             resp = self._session.get(
                 BASE_URL + "/api/getTemp",
-                params={
-                    "device":    device_name,
-                    "id":        thing_id,
-                    "scheduler": 1,
-                },
+                params={"device": device_name, "id": thing_id, "scheduler": 1},
                 timeout=15,
             )
             data = resp.json()
         except Exception as err:
-            # Prova re-login e riprova
-            self._token_a = None
-            self._token_b = None
             raise ImmergasConnectionError(str(err)) from err
 
         if data.get("code") != 200:
@@ -165,58 +104,34 @@ class ImmergasClient:
             "rubinetto":    bool(status.get("rubinettoIcon", False)),
         }
 
-    # ─────────────────────────────────────────
-    #  COMANDI
-    # ─────────────────────────────────────────
-
-    def set_temperature(
-        self, device_name: str, thing_id: str, temp: float
-    ) -> bool:
+    def set_temperature(self, device_name: str, thing_id: str, temp: float) -> bool:
         """Imposta il setpoint di temperatura."""
-        self._ensure_auth()
         try:
             resp = self._session.get(
                 BASE_URL + "/api/setTemp",
-                params={
-                    "temp":   temp,
-                    "device": device_name,
-                    "id":     thing_id,
-                },
+                params={"temp": temp, "device": device_name, "id": thing_id},
                 timeout=15,
             )
-            data = resp.json()
-            return data.get("code") == 200
+            return resp.json().get("code") == 200
         except Exception as err:
             raise ImmergasConnectionError(str(err)) from err
 
-    def set_mode(
-        self, device_name: str, thing_id: str, mode: int
-    ) -> bool:
+    def set_mode(self, device_name: str, thing_id: str, mode: int) -> bool:
         """Imposta la modalità (0=manuale, 1=automatico)."""
-        self._ensure_auth()
         try:
             resp = self._session.get(
                 BASE_URL + "/api/setMode",
-                params={
-                    "mode":   mode,
-                    "device": device_name,
-                    "id":     thing_id,
-                },
+                params={"mode": mode, "device": device_name, "id": thing_id},
                 timeout=15,
             )
-            data = resp.json()
-            return data.get("code") == 200
+            return resp.json().get("code") == 200
         except Exception as err:
             raise ImmergasConnectionError(str(err)) from err
 
     def set_boiler_mode(
         self, thing_id: str, boiler_mode: str, sanitary_temp: int = 45
     ) -> bool:
-        """
-        Imposta la modalità caldaia.
-        boiler_mode: "0"=spento, "2"=estate, "3"=inverno, "4"=raffrescamento
-        """
-        self._ensure_auth()
+        """Imposta la modalità caldaia."""
         try:
             resp = self._session.get(
                 BASE_URL + "/api/setParamWebApp",
@@ -227,7 +142,6 @@ class ImmergasClient:
                 },
                 timeout=15,
             )
-            data = resp.json()
-            return data.get("code") == 200
+            return resp.json().get("code") == 200
         except Exception as err:
             raise ImmergasConnectionError(str(err)) from err
