@@ -1,12 +1,12 @@
 {
   "domain": "immergas",
   "name": "Immergas Smartech Plus",
-  "version": "1.0.1",
+  "codeowners": ["@PeppeWH"],
+  "config_flow": true,
+  "dependencies": [],
   "documentation": "https://github.com/PeppeWH/ha-immergas",
+  "iot_class": "cloud_polling",
   "issue_tracker": "https://github.com/PeppeWH/ha-immergas/issues",
   "requirements": ["requests>=2.28.0"],
-  "dependencies": [],
-  "codeowners": ["@PeppeWH"],
-  "iot_class": "cloud_polling",
-  "config_flow": true
+  "version": "1.0.2"
 }
