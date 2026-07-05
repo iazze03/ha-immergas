@@ -90,10 +90,11 @@ class ImmergasClimate(CoordinatorEntity, ClimateEntity):
             else f"immergas_{self._thing_id}_{self._device_n}"
         )
         self._attr_device_info = {
-            "identifiers":  {(DOMAIN, self._thing_id)},
-            "name":         "Immergas Smartech Plus",
+            "identifiers":  {(DOMAIN, f"{self._thing_id}_{self._device_n}")},
+            "name":         self._device_name,
             "manufacturer": "Immergas",
             "model":        "Smartech Plus",
+            "via_device":   (DOMAIN, self._thing_id),
         }
 
     @property
