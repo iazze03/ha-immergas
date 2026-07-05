@@ -1,6 +1,8 @@
 """Entità Climate per Immergas Smartech Plus."""
 from __future__ import annotations
 
+import logging
+
 from homeassistant.components.climate import (
     ClimateEntity,
     ClimateEntityFeature,
@@ -15,6 +17,8 @@ from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from .const import DOMAIN
 from .coordinator import ImmergasCoordinator
+
+_LOGGER = logging.getLogger(__name__)
 
 PRESET_INVERNO        = "Inverno"
 PRESET_ESTATE         = "Estate"
@@ -37,10 +41,20 @@ async def async_setup_entry(
     data        = hass.data[DOMAIN][entry.entry_id]
     coordinators = data["coordinators"]
     client      = data["client"]
-    async_add_entities([
+    entities = [
         ImmergasClimate(coordinator, client)
         for coordinator in coordinators
-    ])
+    ]
+    _LOGGER.debug("Immergas climate platform adding %s climate entit(y/ies)", len(entities))
+    for entity in entities:
+        _LOGGER.debug(
+            "Immergas climate entity prepared: name=%s thing_id=%s device_n=%s unique_id=%s",
+            entity._device_name,
+            entity._thing_id,
+            entity._device_n,
+            entity.unique_id,
+        )
+    async_add_entities(entities)
 
 
 class ImmergasClimate(CoordinatorEntity, ClimateEntity):
